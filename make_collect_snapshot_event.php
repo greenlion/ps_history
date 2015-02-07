@@ -33,11 +33,11 @@ foreach($rows as $row) {
   }
   $sql .= " from performance_schema." . $row['table_name'] . " )";
 
-  $inserts[$row['table_name']] = "INSERT INTO ps_history." . $row['table_name'] . ' SELECT ts, server_id';
+  $inserts[$row['table_name']] = "INSERT INTO ps_history." . $row['table_name'] . ' SELECT server_id';
   for($z=1;$z<$row['cnt']+1;++$z) {
     $inserts[$row['table_name']] .= ", col$z";
   }
-  $inserts[$row['table_name']] .= " FROM ps_history.snapshot where table_name = '" . $row['table_name'] . "';\n";
+  $inserts[$row['table_name']] .= ",ts FROM ps_history.snapshot where table_name = '" . $row['table_name'] . "';\n";
 }
 
 echo "
@@ -75,6 +75,6 @@ echo "
     COMMIT;
   END IF;
 END;;
+DELIMTER ;
 ";
-
 

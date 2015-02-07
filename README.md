@@ -15,7 +15,7 @@ If you are using MySQL 5.5 or 5.7, or if you are using MariaDB:
 ======
 1. Create the creates_XX.sql file use an INFORMATION_SCHEMA query:
 
-    select concat('CREATE TABLE ps_history.', table_name, ' (ts datetime(6), server_id int unsigned) as select * from  performance_schema.', table_name, ';') 
+    select concat('CREATE TABLE ps_history.', table_name, ' (ts datetime(6),KEY(ts), server_id int unsigned) as select *,NULL as ts from  performance_schema.', table_name, ' LIMIT 0;') 
       from information_schema.tables 
      where table_schema='performance_schema' 
       into outfile '/tmp/creates.sql';
