@@ -70,6 +70,7 @@ BEGIN
     -- These are ps_history specific tables.  There are triggers defined on psh_settings below.
     CREATE TABLE ps_history.psh_settings(variable varchar(64), key(variable), value varchar(64)) engine = InnoDB;
     INSERT INTO ps_history.psh_settings VALUES ('interval', '30');
+    INSERT INTO ps_history.psh_settings VALUES ('retention_period', '1 WEEK');
     CREATE TABLE ps_history.psh_last_refresh(last_refreshed_at DATETIME(6) NOT NULL) engine=InnoDB;
 
 END;;
@@ -148,6 +149,49 @@ BEGIN
 
     END LOOP;
 
+END;;
+
+DROP PROCEDURE IF EXISTS ps_history.auto_cleanup_history;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.auto_cleanup_history()
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+    DECLARE v_retention_period VARCHAR(64);
+
+    -- get the retention period
+    SELECT value
+      INTO v_retention_period
+      FROM ps_history.psh_settings
+     WHERE variable = 'retention_period';
+
+    CALL ps_history.cleanup_history(v_retention_period); 
+
+END;;
+
+DROP PROCEDURE IF EXISTS ps_history.set_collect_interval;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.set_collect_interval(v_interval INT)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+    START TRANSACTION;
+    UPDATE ps_history.psh_settings SET value = v_interval WHERE variable = 'interval';
+    SELECT 'Updated interval setting' as message;
+    COMMIT;
+END;;
+
+DROP PROCEDURE IF EXISTS ps_history.set_retention_period;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.set_retention_period(v_retention_period VARCHAR(64))
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+    START TRANSACTION;
+    CALL ps_history.test_retention_period(v_retention_period);
+    UPDATE ps_history.psh_settings SET value = v_retention_period WHERE variable = 'retention_period';
+    SELECT 'Updated retention period setting' as message;
+    COMMIT;
 END;;
 
 DROP PROCEDURE IF EXISTS collect;;
@@ -281,9 +325,13 @@ BEGIN
         DELETE FROM ps_history.psh_last_refresh;
         INSERT INTO ps_history.psh_last_refresh VALUES (now());
 
+        CALL ps_history.auto_cleanup_history();
+
     END IF;
 
 END;;
+
+DROP PROCEDURE IF EXISTS ps_history.collect_at_interval;
 
 CREATE DEFINER=root@localhost PROCEDURE ps_history.collect_at_interval()
 MODIFIES SQL DATA
@@ -314,15 +362,24 @@ BEGIN
 
 END;;
 
-CREATE DEFINER=root@localhost PROCEDURE ps_history.set_collect_interval(v_interval INT)
+DROP PROCEDURE IF EXISTS ps_history.test_interval;;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.test_retention_period(v_interval VARCHAR(64))
 MODIFIES SQL DATA
 SQL SECURITY DEFINER
 BEGIN
-    START TRANSACTION;
-    UPDATE ps_history.psh_settings SET value = v_interval;
-    SELECT 'Updated interval setting' as message;
-    COMMIT;
+    DECLARE v_bad BOOLEAN DEFAULT FALSE;
+    DECLARE CONTINUE HANDLER FOR SQLSTATE '42000' SET v_bad=TRUE;
+    SET @v_sql = CONCAT('SELECT NOW() - INTERVAL ', v_interval, ' INTO @discard FROM DUAL');
+    PREPARE test_stmt FROM @v_sql;
+    IF v_bad THEN
+        SIGNAL SQLSTATE '99999'   
+        SET MESSAGE_TEXT = 'Invalid retention period.  Should be 1 DAY, 1 WEEK, 7200 SECOND, etc';
+    END IF;
+    EXECUTE test_stmt;
+    DEALLOCATE PREPARE test_stmt;
 END;;
+
 
 DROP EVENT IF EXISTS ps_history.snapshot_performance_schema;;
 
@@ -361,14 +418,16 @@ END;;
 CREATE TRIGGER trg_before_update before UPDATE ON ps_history.psh_settings
 FOR EACH ROW 
 BEGIN  
-    IF new.variable != 'interval' THEN 
+    IF new.variable != 'interval' AND new.variable != 'retention_period' THEN 
         SIGNAL SQLSTATE '99999'   
-        SET MESSAGE_TEXT = 'Only the interval variable is supported at this time';
+        SET MESSAGE_TEXT = 'Only the interval and retention_period variables are supported at this time';
     END IF;
-    IF CAST(new.value AS SIGNED) < 1 THEN 
+    IF new.variable = 'interval' AND CAST(new.value AS SIGNED) < 1 THEN 
         SIGNAL SQLSTATE '99999'   
         SET MESSAGE_TEXT = 'Interval must be greater than or equal to 1';
     END IF;
+
+
 END;;
 
 SELECT 'Installation complete' as message;;

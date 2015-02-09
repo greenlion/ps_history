@@ -18,6 +18,10 @@ By default data is collected every 30 seconds.  You do not need to modify the ev
 You can also update the psh_settings table directly:
 UPDATE ps_history.psh_settings set value = 15 where variable = 'interval';
 
-Cleaning up the ps_history tables
+Automatic data retention and cleanup
 ======
-There are two stored routines you can use to clean up ps_history data.  You can remove all data with *CALL ps_history.truncate_tables();*.  You can remove only a subset of older data using *CALL ps_history.cleanup_history('10 DAY');* to delete all records older than 10 days old.  You can use any argument to the INTERVAL keyword, so to delete data 1 week old you could do *CALL ps_history.cleanup_history('1 WEEK');*.
+By default, ps_history will automatically remove history more than one week old.  Depending on your needs, this interval may be too short or too long.  Use *ps_history.set_retenion_period(X);* to set the retention period.  For example, to retain two weeks of history: *CALL ps_history.set_retention_period('2 WEEK');*.  Use the SQL INTERVAL which is appropriate.  The function will error out if you give an invalid SQL INTERVAL.  
+
+Manually cleaning up the ps_history tables
+======
+There are two stored routines you can use to clean up ps_history data.  You can remove all data with *CALL ps_history.truncate_tables();*.  You can remove only a subset of older data using *CALL ps_history.cleanup_history('1 DAY');* to delete all records older than 1 days old.  You can use any argument to the INTERVAL keyword, so to delete data 1 week old you could do *CALL ps_history.cleanup_history('1 WEEK');*.
