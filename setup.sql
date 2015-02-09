@@ -195,6 +195,8 @@ BEGIN
 
         END LOOP;
 
+        DROP TABLE ps_history.snapshot;
+
     END IF;
 
 END;;
