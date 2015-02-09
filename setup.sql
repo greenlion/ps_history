@@ -297,7 +297,7 @@ END;;
 
 SELECT 'Installation complete' as message;;
 
-SELECT IF(@@event_scheduler=1,'Data will be collected into history tables every 30 seconds, unless you change the ps_history.snapshot_performance_schema event',
+SELECT IF(@@event_scheduler='ON','Data will be collected into history tables every 30 seconds, unless you change the collection interval with CALL ps_history.set_collection_interval(X) where X is a number >= 1 and <= MAXINT ',
                               'You must enable the event scheduler ( SET GLOBAL event_scheduler=1 ) to collect data into the performance_schema, or run the ps_history.collect() procedure manually') 
 as message;;
 
