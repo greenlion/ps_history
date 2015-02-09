@@ -74,6 +74,45 @@ BEGIN
 
 END;;
 
+DROP PROCEDURE IF EXISTS truncate_tables;;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.truncate_tables()
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+    DECLARE v_done BOOLEAN DEFAULT FALSE;
+    DECLARE v_sql TEXT;
+    DECLARE v_table VARCHAR(64);
+
+    DECLARE table_cur CURSOR FOR
+    SELECT CONCAT('TRUNCATE TABLE ps_history.', table_name) 
+      FROM INFORMATION_SCHEMA.TABLES
+     WHERE table_schema = 'ps_history'
+       AND table_name NOT LIKE 'psh%';
+
+    DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET v_done=TRUE;
+
+    SET v_done = FALSE;
+    OPEN table_cur;
+    tableLoop: LOOP
+
+        FETCH table_cur
+         INTO v_sql;
+
+        IF v_done THEN
+            CLOSE table_cur;
+            LEAVE tableLoop;
+        END IF; 
+
+        SET @v_sql := v_sql;
+        PREPARE truncate_stmt FROM @v_sql;
+        EXECUTE truncate_stmt;
+        DEALLOCATE PREPARE truncate_stmt;
+
+    END LOOP;
+
+END;;
+
 DROP PROCEDURE IF EXISTS collect;;
 
 CREATE DEFINER=root@localhost PROCEDURE ps_history.collect()
