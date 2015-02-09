@@ -34,11 +34,11 @@ BEGIN
     DECLARE v_sql TEXT;
     DECLARE table_cur CURSOR 
     FOR 
-    select CONCAT('CREATE TABLE ps_history.', table_name, '( ', group_concat(concat(column_name, ' ', column_type, if(character_set_name is not null,concat(' CHARACTER SET ', character_set_name),''),if(collation_name is not null,concat(' COLLATE ', collation_name),'')) SEPARATOR ',\n'), ',server_id int unsigned,\nts datetime(6),KEY(ts) )') as create_tbl,
-           table_name 
-      from information_schema.columns 
-     where table_schema='performance_schema' 
-     group by table_name;
+    SELECT CONCAT('CREATE TABLE ps_history.', TABLE_NAME, '( ', GROUP_CONCAT(CONCAT(COLUMN_NAME, ' ', COLUMN_TYPE, IF(CHARACTER_SET_NAME IS NOT NULL,CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME),''),if(COLLATION_NAME IS NOT NULL,CONCAT(' COLLATE ', COLLATION_NAME),'')) ORDER BY ORDINAL_POSITION SEPARATOR ',\n') , ',server_id int unsigned,\nts datetime(5),KEY(ts) )') as create_tbl,
+           TABLE_NAME 
+      FROM INFORMATION_SCHEMA.COLUMNS 
+     WHERE TABLE_SCHEMA='performance_schema' 
+     GROUP BY TABLE_NAME;
 
     DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET v_done=TRUE;
 
