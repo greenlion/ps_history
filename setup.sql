@@ -67,6 +67,11 @@ BEGIN
 
     END LOOP;
 
+    -- These are ps_history specific tables.  There are triggers defined on psh_settings below.
+    CREATE TABLE ps_history.psh_settings(variable varchar(64), key(variable), value varchar(64)) engine = InnoDB;
+    INSERT INTO ps_history.psh_settings VALUES ('interval', '30');
+    CREATE TABLE ps_history.psh_last_refresh(last_refreshed_at DATETIME(6) NOT NULL) engine=InnoDB;
+
 END;;
 
 DROP PROCEDURE IF EXISTS collect;;
@@ -197,24 +202,98 @@ BEGIN
 
         DROP TABLE ps_history.snapshot;
 
+        DELETE FROM ps_history.psh_last_refresh;
+        INSERT INTO ps_history.psh_last_refresh VALUES (now());
+
     END IF;
 
+END;;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.collect_at_interval()
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+    DECLARE v_last_refresh DATETIME DEFAULT NULL;
+    DECLARE v_seconds INT DEFAULT 0; 
+    DECLARE v_refresh_interval INT DEFAULT 30;
+
+    -- get the refresh interval
+    SELECT value
+      INTO v_refresh_interval
+      FROM ps_history.psh_settings
+     WHERE variable = 'interval';
+
+    -- Set the last refresh the right amount of time in the past if the data has never been refreshed.
+    -- Otherwise use the actual last refresh time
+    SELECT IF(max(last_refreshed_at) IS NULL, NOW() - INTERVAL v_refresh_interval SECOND,max(last_refreshed_at))  
+      INTO v_last_refresh  
+      FROM ps_history.psh_last_refresh ;
+
+    -- Figure out how long ago (in seconds) the data was collected
+    SET v_seconds = TO_SECONDS(NOW()) - TO_SECONDS(v_last_refresh);
+
+    IF v_seconds >= v_refresh_interval THEN
+       CALL ps_history.collect(); 
+    END IF;
+
+END;;
+
+CREATE DEFINER=root@localhost PROCEDURE ps_history.set_collect_interval(v_interval INT)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+    START TRANSACTION;
+    UPDATE ps_history.psh_settings SET value = v_interval;
+    SELECT 'Updated interval setting' as message;
+    COMMIT;
 END;;
 
 DROP EVENT IF EXISTS ps_history.snapshot_performance_schema;;
 
 CREATE DEFINER=root@localhost EVENT ps_history.snapshot_performance_schema
 ON SCHEDULE
-EVERY 30 SECOND
+EVERY 1 SECOND
 ON COMPLETION PRESERVE
 ENABLE
 COMMENT 'Collect global performance_schema information'
 DO
-CALL ps_history.collect()
+CALL ps_history.collect_at_interval()
 ;;
 
 SELECT 'Creating ps_history tables' as message;;
 call ps_history.setup();;
+
+/* 
+triggers can't be created in stored routines, so they 
+have to be created here.  They aren't vital to behavior so
+it is not so bad if they go missing
+*/
+CREATE TRIGGER trg_before_delete before DELETE ON ps_history.psh_settings
+FOR EACH ROW 
+BEGIN  
+    SIGNAL SQLSTATE '99999'   
+    SET MESSAGE_TEXT = 'You may not delete rows in this table';
+END;;
+
+CREATE TRIGGER trg_before_insert before INSERT ON ps_history.psh_settings
+FOR EACH ROW 
+BEGIN  
+    SIGNAL SQLSTATE '99999'   
+    SET MESSAGE_TEXT = 'You may not insert rows in this table';
+END;;
+
+CREATE TRIGGER trg_before_update before UPDATE ON ps_history.psh_settings
+FOR EACH ROW 
+BEGIN  
+    IF new.variable != 'interval' THEN 
+        SIGNAL SQLSTATE '99999'   
+        SET MESSAGE_TEXT = 'Only the interval variable is supported at this time';
+    END IF;
+    IF CAST(new.value AS SIGNED) < 1 THEN 
+        SIGNAL SQLSTATE '99999'   
+        SET MESSAGE_TEXT = 'Interval must be greater than or equal to 1';
+    END IF;
+END;;
 
 SELECT 'Installation complete' as message;;
 
