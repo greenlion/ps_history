@@ -34,7 +34,7 @@ BEGIN
     DECLARE v_sql TEXT;
     DECLARE table_cur CURSOR 
     FOR 
-    select CONCAT('CREATE TABLE ps_history.', table_name, '( ', group_concat(concat(column_name, ' ', column_type, if(character_set_name is not null,concat(' CHARACTER SET ', character_set_name),''),if(collation_name is not null,concat(' COLLATE ', collation_name),'')) SEPARATOR ',\n'), ',server_id int unsigned,\nts datetime(6) )') as create_tbl,
+    select CONCAT('CREATE TABLE ps_history.', table_name, '( ', group_concat(concat(column_name, ' ', column_type, if(character_set_name is not null,concat(' CHARACTER SET ', character_set_name),''),if(collation_name is not null,concat(' COLLATE ', collation_name),'')) SEPARATOR ',\n'), ',server_id int unsigned,\nts datetime(6),KEY(ts) )') as create_tbl,
            table_name 
       from information_schema.columns 
      where table_schema='performance_schema' 
