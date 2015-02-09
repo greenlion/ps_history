@@ -12,3 +12,8 @@ Event scheduler
 ======
 You should turn the event scheduler on to collect data.  There is a stored routine called *ps_history.collect()* which snapshots the performance schema table data into the history tables in a transactionally consistent manner.  If you don't want to use the event that comes with ps_history, you can run *ps_history.collect()* manually at any time.
 
+By default data is collected every 30 seconds.  You do not need to modify the event to change the collection interval.  Instead, use the *ps_history.set_collection_interval(<seconds>)* procedure.  For example, to collect data every fifteen seconds:
+*CALL ps_history.set_collection_interval(15);*
+
+You can also update the psh_settings table directly:
+UPDATE ps_history.psh_settings set value = 15 where variable = 'interval';
