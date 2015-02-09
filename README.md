@@ -24,4 +24,6 @@ By default, ps_history will automatically remove history more than one week old.
 
 Manually cleaning up the ps_history tables
 ======
-There are two stored routines you can use to clean up ps_history data.  You can remove all data with *CALL ps_history.truncate_tables();*.  You can remove only a subset of older data using *CALL ps_history.cleanup_history('1 DAY');* to delete all records older than 1 days old.  You can use any argument to the INTERVAL keyword, so to delete data 1 week old you could do *CALL ps_history.cleanup_history('1 WEEK');*.
+There are two stored routines you can use to clean up ps_history data.  You can remove all data with *CALL ps_history.truncate_tables();*.  You can remove only a subset of older data, for example, using *CALL ps_history.cleanup_history('1 DAY');* which will delete all records older than 1 days old.  You can use any valid argument to the INTERVAL keyword, so to delete data 1 week old you could do *CALL ps_history.cleanup_history('1 WEEK');*.
+
+
