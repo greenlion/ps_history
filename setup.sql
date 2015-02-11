@@ -34,13 +34,15 @@ BEGIN
     DECLARE v_sql TEXT;
     DECLARE table_cur CURSOR 
     FOR 
-    SELECT CONCAT('CREATE TABLE ps_history.', TABLE_NAME, '( ', GROUP_CONCAT(CONCAT(COLUMN_NAME, ' ', COLUMN_TYPE, IF(CHARACTER_SET_NAME IS NOT NULL,CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME),''),if(COLLATION_NAME IS NOT NULL,CONCAT(' COLLATE ', COLLATION_NAME),'')) ORDER BY ORDINAL_POSITION SEPARATOR ',\n') , ',server_id int unsigned,\nts datetime(5),KEY(ts) )') as create_tbl,
+    SELECT CONCAT('CREATE TABLE ps_history.', TABLE_NAME, '( ', GROUP_CONCAT(CONCAT(COLUMN_NAME, ' ', COLUMN_TYPE, IF(CHARACTER_SET_NAME IS NOT NULL,CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME),''),if(COLLATION_NAME IS NOT NULL,CONCAT(' COLLATE ', COLLATION_NAME),'')) ORDER BY ORDINAL_POSITION SEPARATOR ',\n') , ',server_id int unsigned,\nts datetime(5),KEY(ts) ) PARTITION BY KEY(ts) PARTITIONS 7') as create_tbl,
            TABLE_NAME 
       FROM INFORMATION_SCHEMA.COLUMNS 
      WHERE TABLE_SCHEMA='performance_schema' 
      GROUP BY TABLE_NAME;
 
     DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET v_done=TRUE;
+
+    SET group_concat_max_len := @@max_allowed_packet;
 
     SET v_done = FALSE;
     OPEN table_cur;
@@ -219,6 +221,8 @@ BEGIN
      ORDER BY count(*) DESC;
 
     DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET v_done=TRUE;
+
+    SET group_concat_max_len := @@max_allowed_packet;
 
     SELECT GET_LOCK('ps_snapshot_lock',0) INTO @have_lock;
     IF @have_lock = 1 THEN
