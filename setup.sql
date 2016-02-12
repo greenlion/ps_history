@@ -175,6 +175,16 @@ BEGIN
 
 END;;
 
+-- Added to fix consistency with documentation.  
+-- Fix issue #2
+DROP PROCEDURE IF EXISTS ps_history.set_collection_interval;
+CREATE DEFINER=root@localhost PROCEDURE ps_history.set_collection_interval(v_interval INT)
+MODIFIES SQL DATA
+SQL SECURITY DEFINER
+BEGIN
+  CALL ps_history.set_collect_interval(v_interval);
+END;
+
 DROP PROCEDURE IF EXISTS ps_history.set_collect_interval;
 
 CREATE DEFINER=root@localhost PROCEDURE ps_history.set_collect_interval(v_interval INT)
