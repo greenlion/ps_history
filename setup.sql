@@ -228,6 +228,11 @@ BEGIN
 
     SET group_concat_max_len := @@max_allowed_packet;
 
+    -- moved from end of procedure to start of procedure to fix issue #3
+    DELETE FROM ps_history.psh_last_refresh;
+    INSERT INTO ps_history.psh_last_refresh VALUES (now());
+
+
     SELECT GET_LOCK('ps_snapshot_lock',0) INTO @have_lock;
     IF @have_lock = 1 THEN
 
@@ -329,9 +334,6 @@ BEGIN
         END LOOP;
 
         DROP TABLE ps_history.snapshot;
-
-        DELETE FROM ps_history.psh_last_refresh;
-        INSERT INTO ps_history.psh_last_refresh VALUES (now());
 
         CALL ps_history.auto_cleanup_history();
 
