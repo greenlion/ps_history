@@ -17,6 +17,8 @@ DELIMITER ;;
     the GPL (the LGPL) in COPYING.LESSER.
     If not, see <http://www.gnu.org/licenses/>.
 */
+SET NAMES UTF8;
+
 DROP DATABASE IF EXISTS ps_history;
 
 CREATE DATABASE IF NOT EXISTS ps_history;
@@ -34,7 +36,7 @@ BEGIN
     DECLARE v_sql TEXT;
     DECLARE table_cur CURSOR 
     FOR 
-    SELECT CONCAT('CREATE TABLE ps_history.', TABLE_NAME, '( ', GROUP_CONCAT(CONCAT(COLUMN_NAME, ' ', COLUMN_TYPE, IF(CHARACTER_SET_NAME IS NOT NULL,CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME),''),if(COLLATION_NAME IS NOT NULL,CONCAT(' COLLATE ', COLLATION_NAME),'')) ORDER BY ORDINAL_POSITION SEPARATOR ',\n') , ',server_id int unsigned,\nts datetime(5),KEY(ts) ) PARTITION BY KEY(ts) PARTITIONS 7') as create_tbl,
+    SELECT CONCAT('CREATE TABLE ps_history.', TABLE_NAME, '( ', GROUP_CONCAT(CONCAT(COLUMN_NAME, ' ', IF(COLUMN_TYPE = 'timestamp','datetime',COLUMN_TYPE), IF(CHARACTER_SET_NAME IS NOT NULL,CONCAT(' CHARACTER SET ', CHARACTER_SET_NAME),''),if(COLLATION_NAME IS NOT NULL,CONCAT(' COLLATE ', COLLATION_NAME),'')) ORDER BY ORDINAL_POSITION SEPARATOR ',\n') , ',server_id int unsigned,\nts datetime(5),KEY(ts) ) CHARSET=UTF8 COLLATE=UTF8_GENERAL_CI PARTITION BY KEY(ts) PARTITIONS 7') as create_tbl,
            TABLE_NAME 
       FROM INFORMATION_SCHEMA.COLUMNS 
      WHERE TABLE_SCHEMA='performance_schema' 
@@ -63,6 +65,8 @@ BEGIN
       DEALLOCATE PREPARE drop_stmt;
 
       SET @v_sql := v_sql;
+      -- print out the CREATE statements so the user knows what is happening
+      SELECT @v_sql;
       PREPARE create_stmt FROM @v_sql;
       EXECUTE create_stmt;
       DEALLOCATE PREPARE create_stmt;
@@ -70,10 +74,10 @@ BEGIN
     END LOOP;
 
     -- These are ps_history specific tables.  There are triggers defined on psh_settings below.
-    CREATE TABLE ps_history.psh_settings(variable varchar(64), key(variable), value varchar(64)) engine = InnoDB;
+    CREATE TABLE ps_history.psh_settings(variable varchar(64), key(variable), value varchar(64)) CHARSET=UTF8 COLLATE=UTF8_GENERAL_CI engine = InnoDB;
     INSERT INTO ps_history.psh_settings VALUES ('interval', '30');
     INSERT INTO ps_history.psh_settings VALUES ('retention_period', '1 WEEK');
-    CREATE TABLE ps_history.psh_last_refresh(last_refreshed_at DATETIME(6) NOT NULL) engine=InnoDB;
+    CREATE TABLE ps_history.psh_last_refresh(last_refreshed_at DATETIME(6) NOT NULL) engine=InnoDB CHARSET=UTF8 COLLATE=UTF8_GENERAL_CI;
 
 END;;
 
