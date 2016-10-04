@@ -2,6 +2,11 @@ Snapshot creation scripts for performance schema
 ======
 The purpose of these scripts is to provide a mechanism for periodically snapshotting the contents of the MySQL Performance_Schema.  This will allow you to look at historical trends and changes in the Performance_Schema information, something that you can't do out of the box.
 
+SYS schema support now added (`sys_history`)
+======
+The setup process will create a copy of almost all of the `sys` views, with the exception primirily those that use the information_schema.  The `sys_history` schema contains views that have been modified to utilize the ps_history tables to
+prevent a historical view of the `sys` schema of `ps_history` data.
+
 Installation
 ======
 To install the ps_history schema, use the provided *setup.sql* script.  It will create the ps_history database and run the *ps_history.setup()* script to create history tables that automatically match the installed performance_schema tables.  
