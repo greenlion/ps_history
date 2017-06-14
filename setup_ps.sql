@@ -64,7 +64,8 @@ BEGIN
       EXECUTE drop_stmt;
       DEALLOCATE PREPARE drop_stmt;
 
-      SET @v_sql := v_sql;
+      SET @v_sql := REPLACE(v_sql,'timestamp(6)','datetime(6) ');
+	
       -- print out the CREATE statements so the user knows what is happening
       SELECT @v_sql;
       PREPARE create_stmt FROM @v_sql;
